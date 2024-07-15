@@ -4,7 +4,6 @@ import random
 from pygame import mixer
 
 PLAYER_SPEED = 0.4
-# ENEMY_SPEED = random.uniform(0.15, 0.3)
 MISSILE_SPEED = 0.5
 
 # initialize the pygame
@@ -28,6 +27,9 @@ playerImg = pygame.image.load("resources/player.png")
 playerX = 370
 playerY = 480
 playerX_change = 0
+playerY_change = 0
+player_explosion_sound = mixer.Sound("resources/explode_player.mp3")
+
 
 # Create Rects for collision detection
 player_rect = playerImg.get_rect()
@@ -41,6 +43,7 @@ enemyX_change = []
 enemyY_change = []
 enemy_rects = []
 num_of_enemies = 6
+enemy_explosion_sound = mixer.Sound("resources/explode_enemy.mp3")
 
 # create enemies in list
 for i in range(num_of_enemies):
@@ -57,6 +60,7 @@ for i in range(num_of_enemies):
 
 # missile
 missileImg = pygame.image.load("resources/missile.png")
+missile_sound = mixer.Sound("resources/laser.wav")
 missileX = 0
 missileY = 480
 missileX_change = 0
@@ -67,10 +71,16 @@ missile_rect = missileImg.get_rect()
 missile_rect.topleft = (missileX, missileY)
 
 # explosion
-explosionImg = pygame.image.load("resources/explode.png")
-explodeX = 0
-explodeY = 0
-explosion_timer = 0
+explosionImg = pygame.image.load("resources/explode_enemy.png")
+explode_enemyX = 0
+explode_enemyY = 0
+explode_enemy_timer = 0
+
+# explosion_player
+explosion_playerImg = pygame.image.load("resources/explode_player.png")
+explode_playerX = 400
+explode_playerY = 300
+explode_player_timer = 0
 
 # score
 score_value = 0
@@ -105,8 +115,12 @@ def fire_missile(x, y):
     screen.blit(missileImg, (x + 16, y + 10))
 
 
-def explosion(x, y):
+def explode_enemy(x, y):
     screen.blit(explosionImg, (x, y))
+
+
+def explode_player(x, y):
+    screen.blit(explosion_playerImg, (x, y))
 
 
 # game loop
@@ -114,7 +128,6 @@ running = True
 while running:
 
     # screen background
-    screen.fill((17, 0, 26))
     screen.blit(background, (-95, 0))
 
     for event in pygame.event.get():
@@ -129,19 +142,26 @@ while running:
                 playerX_change = -PLAYER_SPEED
             if event.key == pygame.K_RIGHT:
                 playerX_change = PLAYER_SPEED
+            if event.key == pygame.K_UP:
+                playerY_change = -PLAYER_SPEED
+            if event.key == pygame.K_DOWN:
+                playerY_change = PLAYER_SPEED
             if event.key == pygame.K_SPACE:
                 if missile_state == "ready":
                     missileX = playerX
+                    missileY = playerY
                     fire_missile(missileX, missileY)
-                    missile_sound = mixer.Sound("resources/laser.wav")
                     missile_sound.play()
 
         if event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT or event.key == pygame.K_UP or \
+                    event.key == pygame.K_DOWN:
                 playerX_change = 0
+                playerY_change = 0
 
     # player movement
     playerX += playerX_change
+    playerY += playerY_change
 
     # Update Rect positions
     player_rect.topleft = (playerX, playerY)
@@ -161,8 +181,8 @@ while running:
             for j in range(num_of_enemies):
                 enemyY[j] = 2000
 
-            explosion_sound = mixer.Sound("resources/player_explode.mp3")
-            explosion_sound.play()
+            explode_player_sound = mixer.Sound("resources/explode_player.mp3")
+            explode_player_sound.play()
             explosion_timer = 240
             explodeX = playerX
             explodeY = playerY
@@ -185,9 +205,8 @@ while running:
 
         # enemy hit detection
         if missile_rect.colliderect(enemy_rects[i]):
-            explosion_sound = mixer.Sound("resources/enemy_explode.mp3")
-            explosion_sound.play()
-            explosion_timer = 240
+            enemy_explosion_sound.play()
+            explode_enemy_timer = 240
             explodeX = enemyX[i]
             explodeY = enemyY[i]
             missileY = 520
@@ -202,9 +221,9 @@ while running:
         enemy(enemyX[i], enemyY[i], i)
 
     # explosion management
-    if explosion_timer > 0:
-        explosion(explodeX, explodeY)
-        explosion_timer -= 1
+    if explode_enemy_timer > 0:
+        explode_enemy(explodeX, explodeY)
+        explode_enemy_timer -= 1
 
     # missile movement
     # reset missile
